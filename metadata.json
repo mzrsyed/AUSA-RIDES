@@ -1,0 +1,6 @@
+{
+  "name": "AusaAuto",
+  "description": "Local Auto-Rickshaw Ride Booking & Dispatch for Ausa, Maharashtra (18.2500° N, 76.5000° E).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

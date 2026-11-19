@@ -1,0 +1,304 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile for Rider, Auto Driver, or Super Admin in Ausa.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "email": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 13,
+          "maxLength": 13,
+          "pattern": "^\\+91[6-9][0-9]{9}$"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["rider", "driver", "admin"]
+        },
+        "accountStatus": {
+          "type": "string",
+          "enum": ["approved", "pending_verification", "suspended"]
+        },
+        "vehicleNumber": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^(|MH-24-[A-Z]{1,2}-[0-9]{4})$"
+        },
+        "licenseNumber": {
+          "type": "string",
+          "maxLength": 24,
+          "pattern": "^(|[A-Z0-9\\-]{8,24})$"
+        },
+        "isOnline": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "fullName",
+        "email",
+        "phone",
+        "role",
+        "accountStatus",
+        "vehicleNumber",
+        "licenseNumber",
+        "isOnline",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FareSettings": {
+      "title": "FareSettings",
+      "description": "Admin-controlled fare configuration for Ausa local auto-rickshaws.",
+      "type": "object",
+      "properties": {
+        "baseFare": {
+          "type": "number"
+        },
+        "perKmRate": {
+          "type": "number"
+        },
+        "minFare": {
+          "type": "number"
+        },
+        "outerAreaSurcharge": {
+          "type": "number"
+        },
+        "updatedBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "baseFare",
+        "perKmRate",
+        "minFare",
+        "outerAreaSurcharge",
+        "updatedBy",
+        "updatedAt"
+      ]
+    },
+    "Ride": {
+      "title": "Ride",
+      "description": "Auto-rickshaw ride booking in Ausa without exposed PII or PIN.",
+      "type": "object",
+      "properties": {
+        "rideId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "riderId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "riderName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "driverId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "driverName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "driverVehicleNumber": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "pickupLandmarkId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "pickupLandmarkName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "pickupCustomAddress": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "dropoffLandmarkId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "dropoffLandmarkName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "dropoffCustomAddress": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "distanceKm": {
+          "type": "number"
+        },
+        "fareInr": {
+          "type": "number"
+        },
+        "baseFareUsed": {
+          "type": "number"
+        },
+        "perKmUsed": {
+          "type": "number"
+        },
+        "locationSurchargeUsed": {
+          "type": "number"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["cash", "upi"]
+        },
+        "paymentStatus": {
+          "type": "string",
+          "enum": ["pending", "paid"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["requested", "accepted", "arrived", "in_progress", "completed", "cancelled"]
+        },
+        "submittedPin": {
+          "type": "string",
+          "maxLength": 4
+        },
+        "cancelledBy": {
+          "type": "string",
+          "enum": ["", "rider", "driver", "admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "rideId",
+        "riderId",
+        "riderName",
+        "driverId",
+        "driverName",
+        "driverVehicleNumber",
+        "pickupLandmarkId",
+        "pickupLandmarkName",
+        "pickupCustomAddress",
+        "dropoffLandmarkId",
+        "dropoffLandmarkName",
+        "dropoffCustomAddress",
+        "distanceKm",
+        "fareInr",
+        "baseFareUsed",
+        "perKmUsed",
+        "locationSurchargeUsed",
+        "paymentMethod",
+        "paymentStatus",
+        "status",
+        "submittedPin",
+        "cancelledBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RideOtp": {
+      "title": "RideOtp",
+      "description": "4-digit ride start OTP/PIN isolated so only the Rider and Admin can read it.",
+      "type": "object",
+      "properties": {
+        "pin": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 4,
+          "pattern": "^[0-9]{4}$"
+        },
+        "riderId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["pin", "riderId", "createdAt"]
+    },
+    "RideContact": {
+      "title": "RideContact",
+      "description": "Ephemeral phone contact isolated to active ride statuses (accepted, arrived, in_progress).",
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "minLength": 13,
+          "maxLength": 13,
+          "pattern": "^\\+91[6-9][0-9]{9}$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["phone", "ownerId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profiles containing PII (phone, email), roles, and verification status."
+    },
+    "/settings/fares": {
+      "schema": { "$ref": "#/entities/FareSettings" },
+      "description": "Dynamic fare settings controlled strictly by Admin."
+    },
+    "/rides/{rideId}": {
+      "schema": { "$ref": "#/entities/Ride" },
+      "description": "Ausa ride bookings with immutable fare, distance, and strict state machine."
+    },
+    "/rides/{rideId}/private/otp": {
+      "schema": { "$ref": "#/entities/RideOtp" },
+      "description": "Isolated 4-digit ride start PIN readable only by Rider and Admin."
+    },
+    "/rides/{rideId}/contacts/{contactRole}": {
+      "schema": { "$ref": "#/entities/RideContact" },
+      "description": "Isolated Rider/Driver phone contacts readable only during accepted/arrived/in_progress."
+    }
+  }
+}
