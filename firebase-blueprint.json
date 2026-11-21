@@ -72,19 +72,13 @@
     },
     "FareSettings": {
       "title": "FareSettings",
-      "description": "Admin-controlled fare configuration for Ausa local auto-rickshaws.",
+      "description": "Admin-controlled fare configuration for AusaRides (Bustand-Ausa Mode per person & standard Ausa local fare).",
       "type": "object",
       "properties": {
-        "baseFare": {
+        "modeBustandPerPerson": {
           "type": "number"
         },
-        "perKmRate": {
-          "type": "number"
-        },
-        "minFare": {
-          "type": "number"
-        },
-        "outerAreaSurcharge": {
+        "standardFare": {
           "type": "number"
         },
         "updatedBy": {
@@ -97,10 +91,8 @@
         }
       },
       "required": [
-        "baseFare",
-        "perKmRate",
-        "minFare",
-        "outerAreaSurcharge",
+        "modeBustandPerPerson",
+        "standardFare",
         "updatedBy",
         "updatedAt"
       ]
@@ -163,19 +155,13 @@
           "type": "string",
           "maxLength": 140
         },
+        "passengerCount": {
+          "type": "number"
+        },
         "distanceKm": {
           "type": "number"
         },
         "fareInr": {
-          "type": "number"
-        },
-        "baseFareUsed": {
-          "type": "number"
-        },
-        "perKmUsed": {
-          "type": "number"
-        },
-        "locationSurchargeUsed": {
           "type": "number"
         },
         "paymentMethod": {
@@ -220,11 +206,9 @@
         "dropoffLandmarkId",
         "dropoffLandmarkName",
         "dropoffCustomAddress",
+        "passengerCount",
         "distanceKm",
         "fareInr",
-        "baseFareUsed",
-        "perKmUsed",
-        "locationSurchargeUsed",
         "paymentMethod",
         "paymentStatus",
         "status",

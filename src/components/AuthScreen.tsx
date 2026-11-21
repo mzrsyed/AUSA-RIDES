@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import {
   ArrowRight,
-  Car,
+  BookOpen,
   CheckCircle2,
   KeyRound,
   Lock,
@@ -21,16 +21,17 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react';
-import { AUSA_LANDMARKS } from '../data/ausaLandmarks';
 import { useT } from '../i18n/translations';
 import { auth, googleProvider } from '../lib/firebase';
 import { Lang } from '../types';
 import { ADMIN_EMAIL, isAdminEmail } from '../utils/sanitize';
+import { InfoSection } from './InfoModal';
 
 interface AuthScreenProps {
   lang: Lang;
   unverifiedUser: User | null;
   onVerificationRefresh: () => Promise<void>;
+  onOpenInfo: (section: InfoSection) => void;
 }
 
 function formatAuthError(err: unknown, emailDisabledMsg: string): string {
@@ -57,6 +58,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   lang,
   unverifiedUser,
   onVerificationRefresh,
+  onOpenInfo,
 }) => {
   const t = useT(lang);
   const [portal, setPortal] = useState<'user' | 'admin'>('user');
@@ -146,7 +148,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       const code = (err as { code?: string })?.code || '';
       if (code === 'auth/user-not-found' || code === 'auth/invalid-credential') {
         setErrorMsg(
-          'Admin email/password account not found or password incorrect. If first time using Email/Password, click "First-Time: Register Admin Email/Password" or use "Sign in with Google".'
+          'Admin email/password account not found or password incorrect. Click "First-Time: Register Admin Email/Password" or use "Sign in with Google".'
         );
       } else {
         setErrorMsg(formatAuthError(err, t.adminEmailDisabledNote));
@@ -261,11 +263,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10 space-y-14">
-      {/* Top Split: Hero Showcase + Dual-Portal Auth Card */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10 space-y-8">
+      {/* Clean Homepage Split: Hero Visual + Login Card */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
         <div className="lg:col-span-7 flex flex-col justify-between bg-zinc-950 text-white rounded-3xl overflow-hidden border border-zinc-800">
-          <div className="relative h-56 sm:h-72 lg:h-80 w-full bg-zinc-900 overflow-hidden">
+          <div className="relative h-64 sm:h-80 lg:h-96 w-full bg-zinc-900 overflow-hidden">
             {!heroImgFailed ? (
               <img
                 src="/src/assets/images/ausa_auto_hero_1795116124865.jpg"
@@ -280,7 +282,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/35 to-transparent" />
-            <div className="absolute bottom-4 left-6 right-6">
+            <div className="absolute bottom-5 left-6 right-6">
               <p className="text-xs font-medium text-yellow-400 mb-1">{t.heroKicker}</p>
               <h1
                 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight"
@@ -288,27 +290,40 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               >
                 {t.heroTitle}
               </h1>
+              <p className="text-sm sm:text-base text-zinc-200 mt-2 font-medium">
+                {t.heroSubtitle}
+              </p>
             </div>
           </div>
 
-          <div className="p-6 sm:p-8 flex flex-col justify-between flex-1 gap-6">
-            <p className="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-2xl">
-              {t.heroSubtitle}
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-zinc-800">
-              <div>
-                <p className="text-xs text-zinc-400">Coverage</p>
-                <p className="text-sm font-semibold text-white mt-0.5">11 Ausa Landmarks</p>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-400">Trip Security</p>
-                <p className="text-sm font-semibold text-yellow-400 mt-0.5">4-Digit Pickup PIN</p>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-400">Fleet Verification</p>
-                <p className="text-sm font-semibold text-white mt-0.5">MH-24 RTO Checked</p>
-              </div>
+          {/* Separate Action Buttons for Instructions, Stops/Fares, and Safety */}
+          <div className="p-5 sm:p-6 bg-zinc-950 border-t border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <p className="text-xs text-zinc-400">{t.infoBarPrompt}</p>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => onOpenInfo('guide')}
+                className="min-h-[42px] px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:border-yellow-400 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-yellow-400" />
+                <span>{t.navGuide}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenInfo('fares')}
+                className="min-h-[42px] px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:border-yellow-400 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap"
+              >
+                <MapPin className="w-3.5 h-3.5 text-yellow-400" />
+                <span>{t.navFares}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenInfo('safety')}
+                className="min-h-[42px] px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:border-yellow-400 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-yellow-400" />
+                <span>{t.navSafety}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -579,126 +594,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           )}
         </div>
       </div>
-
-      {/* Section 1: Ausa Stops & Local Landmarks Directory */}
-      <section id="landmarks" aria-labelledby="landmarks-heading" className="pt-8 border-t border-zinc-200">
-        <div className="max-w-3xl mb-6">
-          <h2
-            id="landmarks-heading"
-            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950"
-            style={{ textWrap: 'balance' }}
-          >
-            {t.landmarksSectionHeading}
-          </h2>
-          <p className="text-sm sm:text-base text-zinc-600 mt-2 leading-relaxed">
-            {t.landmarksSectionSub}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {AUSA_LANDMARKS.map((lm) => (
-            <div
-              key={lm.id}
-              className="bg-white border border-zinc-200 rounded-2xl p-4 flex items-start justify-between gap-3"
-            >
-              <div>
-                <p className="text-sm font-bold text-zinc-950">
-                  {lang === 'mr' ? lm.nameMr : lm.nameEn}
-                </p>
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  {lang === 'mr' ? lm.tagMr : lm.tagEn}
-                  <span aria-hidden="true"> · </span>
-                  <span className="font-mono">
-                    {lm.lat.toFixed(4)}° N, {lm.lng.toFixed(4)}° E
-                  </span>
-                </p>
-              </div>
-              <MapPin className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Section 2: Platform Features Explained by Role & Section */}
-      <section id="features" aria-labelledby="features-heading" className="pt-8 border-t border-zinc-200">
-        <div className="max-w-3xl mb-8">
-          <h2
-            id="features-heading"
-            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950"
-            style={{ textWrap: 'balance' }}
-          >
-            {t.featuresSectionHeading}
-          </h2>
-          <p className="text-sm sm:text-base text-zinc-600 mt-2 leading-relaxed">
-            {t.featuresSectionSub}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-2.5">
-            <div className="flex items-center gap-2.5 text-zinc-950">
-              <MapPin className="w-5 h-5 text-yellow-600 shrink-0" />
-              <h3 className="text-base font-bold">{t.featRiderTitle}</h3>
-            </div>
-            <p className="text-sm text-zinc-600 leading-relaxed">{t.featRiderBody}</p>
-          </div>
-
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-2.5">
-            <div className="flex items-center gap-2.5 text-zinc-950">
-              <Car className="w-5 h-5 text-yellow-600 shrink-0" />
-              <h3 className="text-base font-bold">{t.featDriverTitle}</h3>
-            </div>
-            <p className="text-sm text-zinc-600 leading-relaxed">{t.featDriverBody}</p>
-          </div>
-
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-2.5">
-            <div className="flex items-center gap-2.5 text-zinc-950">
-              <Shield className="w-5 h-5 text-yellow-600 shrink-0" />
-              <h3 className="text-base font-bold">{t.featAdminTitle}</h3>
-            </div>
-            <p className="text-sm text-zinc-600 leading-relaxed">{t.featAdminBody}</p>
-          </div>
-
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-2.5">
-            <div className="flex items-center gap-2.5 text-zinc-950">
-              <ShieldCheck className="w-5 h-5 text-yellow-600 shrink-0" />
-              <h3 className="text-base font-bold">{t.featSecurityTitle}</h3>
-            </div>
-            <p className="text-sm text-zinc-600 leading-relaxed">{t.featSecurityBody}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Section 3: Security & Trust Guarantees */}
-      <section
-        id="safety"
-        aria-labelledby="safety-heading"
-        className="bg-zinc-950 text-white rounded-3xl p-6 sm:p-8 border border-zinc-800"
-      >
-        <h2 id="safety-heading" className="text-xl sm:text-2xl font-extrabold mb-6">
-          {t.safetySectionHeading}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-1.5">
-            <p className="text-sm font-bold text-yellow-400">{t.safetyPoint1Title}</p>
-            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-              {t.safetyPoint1Desc}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-sm font-bold text-yellow-400">{t.safetyPoint2Title}</p>
-            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-              {t.safetyPoint2Desc}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-sm font-bold text-yellow-400">{t.safetyPoint3Title}</p>
-            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-              {t.safetyPoint3Desc}
-            </p>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

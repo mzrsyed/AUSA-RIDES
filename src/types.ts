@@ -29,10 +29,8 @@ export interface UserProfile {
 }
 
 export interface FareSettings {
-  baseFare: number;
-  perKmRate: number;
-  minFare: number;
-  outerAreaSurcharge: number;
+  modeBustandPerPerson: number;
+  standardFare: number;
   updatedBy: string;
   updatedAt: Timestamp;
 }
@@ -50,11 +48,9 @@ export interface Ride {
   dropoffLandmarkId: string;
   dropoffLandmarkName: string;
   dropoffCustomAddress: string;
+  passengerCount: number;
   distanceKm: number;
   fareInr: number;
-  baseFareUsed: number;
-  perKmUsed: number;
-  locationSurchargeUsed: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   status: RideStatus;

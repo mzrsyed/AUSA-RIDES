@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { DEFAULT_FARE_SETTINGS } from '../data/ausaLandmarks';
 import { useT } from '../i18n/translations';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType, reportFirestoreError } from '../lib/firebase';
 import { AccountStatus, FareSettings, Lang, Ride, UserProfile } from '../types';
 
 interface AdminDashboardProps {
@@ -39,16 +39,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [rides, setRides] = useState<Ride[]>([]);
 
-  const [baseFare, setBaseFare] = useState<number>(DEFAULT_FARE_SETTINGS.baseFare);
-  const [perKmRate, setPerKmRate] = useState<number>(DEFAULT_FARE_SETTINGS.perKmRate);
-  const [minFare, setMinFare] = useState<number>(DEFAULT_FARE_SETTINGS.minFare);
-  const [outerAreaSurcharge, setOuterAreaSurcharge] = useState<number>(
-    DEFAULT_FARE_SETTINGS.outerAreaSurcharge
+  const [modeBustandPerPerson, setModeBustandPerPerson] = useState<number>(
+    DEFAULT_FARE_SETTINGS.modeBustandPerPerson
   );
+  const [standardFare, setStandardFare] = useState<number>(DEFAULT_FARE_SETTINGS.standardFare);
   const [savingFares, setSavingFares] = useState(false);
   const [faresNotice, setFaresNotice] = useState('');
+  const [adminError, setAdminError] = useState('');
 
-  // Listen to all registered users
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, 'users'),
@@ -62,7 +60,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
     return unsub;
   }, []);
 
-  // Listen to all rides in Ausa
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, 'rides'),
@@ -82,17 +79,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
     return unsub;
   }, []);
 
-  // Listen to settings/fares
   useEffect(() => {
     const unsub = onSnapshot(
       doc(db, 'settings', 'fares'),
       (snap) => {
         if (snap.exists()) {
-          const data = snap.data() as FareSettings;
-          setBaseFare(data.baseFare);
-          setPerKmRate(data.perKmRate);
-          setMinFare(data.minFare);
-          setOuterAreaSurcharge(data.outerAreaSurcharge);
+          const data = snap.data() as Partial<FareSettings>;
+          if (typeof data.modeBustandPerPerson === 'number') {
+            setModeBustandPerPerson(data.modeBustandPerPerson);
+          }
+          if (typeof data.standardFare === 'number') {
+            setStandardFare(data.standardFare);
+          }
         }
       },
       (err) => {
@@ -150,6 +148,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
   ).length;
 
   const handleAccountStatus = async (user: UserProfile, nextStatus: AccountStatus) => {
+    setAdminError('');
     try {
       await updateDoc(doc(db, 'users', user.uid), {
         accountStatus: nextStatus,
@@ -157,11 +156,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
         updatedAt: serverTimestamp(),
       });
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}`);
+      reportFirestoreError(err, OperationType.UPDATE, `users/${user.uid}`);
+      setAdminError(`Failed to update account status for ${user.fullName}.`);
     }
   };
 
   const handleAdminCancelRide = async (ride: Ride) => {
+    setAdminError('');
     try {
       await updateDoc(doc(db, 'rides', ride.rideId), {
         status: 'cancelled',
@@ -169,31 +170,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
         updatedAt: serverTimestamp(),
       });
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `rides/${ride.rideId}`);
+      reportFirestoreError(err, OperationType.UPDATE, `rides/${ride.rideId}`);
+      setAdminError(`Failed to cancel ride ${ride.rideId.slice(-6)}.`);
     }
   };
 
   const handleSaveFares = async (e: React.FormEvent) => {
     e.preventDefault();
     setFaresNotice('');
-    const safeBase = Math.min(200, Math.max(10, Number(baseFare) || 20));
-    const safePerKm = Math.min(100, Math.max(5, Number(perKmRate) || 15));
-    const safeMin = Math.min(200, Math.max(10, Number(minFare) || 20));
-    const safeOuter = Math.min(100, Math.max(0, Number(outerAreaSurcharge) || 0));
+    setAdminError('');
+    const safePerPerson = Math.min(100, Math.max(5, Number(modeBustandPerPerson) || 10));
+    const safeStandard = Math.min(500, Math.max(10, Number(standardFare) || 50));
 
     setSavingFares(true);
     try {
       await setDoc(doc(db, 'settings', 'fares'), {
-        baseFare: safeBase,
-        perKmRate: safePerKm,
-        minFare: safeMin,
-        outerAreaSurcharge: safeOuter,
+        modeBustandPerPerson: safePerPerson,
+        standardFare: safeStandard,
         updatedBy: profile.uid,
         updatedAt: serverTimestamp(),
       });
       setFaresNotice(t.faresSaved);
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'settings/fares');
+      reportFirestoreError(err, OperationType.WRITE, 'settings/fares');
+      setAdminError('Could not save fare rates. Please verify admin permissions.');
     } finally {
       setSavingFares(false);
     }
@@ -201,7 +201,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-24 lg:pb-10 space-y-6">
-      {/* Top KPI Summary */}
+      {adminError && (
+        <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800">
+          {adminError}
+        </div>
+      )}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-zinc-950 text-white rounded-2xl p-4">
           <p className="text-xs text-zinc-400">Pending Verification</p>
@@ -229,7 +233,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
         </div>
       </div>
 
-      {/* Desktop Navigation Tabs */}
       <div className="hidden sm:flex items-center gap-2 p-1 bg-zinc-200/70 rounded-xl w-fit">
         <button
           type="button"
@@ -279,7 +282,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
         </button>
       </div>
 
-      {/* DRIVERS MANAGEMENT TAB */}
       {tab === 'drivers' && (
         <div>
           <h2 className="text-lg font-bold text-zinc-950 mb-4">{t.adminDriversTitle}</h2>
@@ -346,7 +348,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
         </div>
       )}
 
-      {/* ALL USERS MANAGEMENT TAB */}
       {tab === 'users' && (
         <div>
           <h2 className="text-lg font-bold text-zinc-950 mb-4">{t.adminUsersTitle}</h2>
@@ -418,7 +419,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
         </div>
       )}
 
-      {/* LIVE RIDES MONITOR TAB */}
       {tab === 'rides' && (
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -465,10 +465,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
                       <span className="font-mono">{r.rideId.slice(-8)}</span>
                       <span aria-hidden="true">·</span>
                       <span className="uppercase">{r.paymentMethod}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{r.passengerCount || 1} pax</span>
                     </div>
                     <p className="text-sm font-bold text-zinc-950">
                       {r.pickupLandmarkName} → {r.dropoffLandmarkName}
                     </p>
+                    {(r.pickupCustomAddress || r.dropoffCustomAddress) && (
+                      <p className="text-xs text-zinc-500">
+                        {r.pickupCustomAddress || '—'} → {r.dropoffCustomAddress || '—'}
+                      </p>
+                    )}
                     <p className="text-xs text-zinc-600">
                       Rider: {r.riderName} · Driver: {r.driverName || 'Unassigned'}{' '}
                       {r.driverVehicleNumber ? `(${r.driverVehicleNumber})` : ''}
@@ -497,79 +504,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
         </div>
       )}
 
-      {/* DYNAMIC FARE SETTINGS TAB */}
       {tab === 'fares' && (
         <div className="max-w-2xl bg-white border border-zinc-200 rounded-3xl p-6">
           <h2 className="text-lg font-bold text-zinc-950 mb-1">{t.fareConfigTitle}</h2>
           <p className="text-xs text-zinc-500 mb-5">
-            Changes sync immediately to settings/fares and govern fare validation in Firestore Security Rules.
+            Synced live to settings/fares and enforced by Firestore Security Rules.
           </p>
 
           <form onSubmit={handleSaveFares} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                  {t.baseFareLabel} (₹)
-                </label>
-                <input
-                  type="number"
-                  min={10}
-                  max={200}
-                  value={baseFare}
-                  onChange={(e) => setBaseFare(Number(e.target.value))}
-                  className="w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border border-zinc-300 bg-stone-50 font-mono text-sm text-zinc-950"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                  {t.distanceChargeLabel} (₹/km)
+                  {t.modeBustandRateLabel}
                 </label>
                 <input
                   type="number"
                   min={5}
                   max={100}
-                  value={perKmRate}
-                  onChange={(e) => setPerKmRate(Number(e.target.value))}
+                  value={modeBustandPerPerson}
+                  onChange={(e) => setModeBustandPerPerson(Number(e.target.value))}
                   className="w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border border-zinc-300 bg-stone-50 font-mono text-sm text-zinc-950"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                  {t.minFareLabel}
+                  {t.standardFareRateLabel}
                 </label>
                 <input
                   type="number"
                   min={10}
-                  max={200}
-                  value={minFare}
-                  onChange={(e) => setMinFare(Number(e.target.value))}
-                  className="w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border border-zinc-300 bg-stone-50 font-mono text-sm text-zinc-950"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                  {t.outerZoneLabel}
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={outerAreaSurcharge}
-                  onChange={(e) => setOuterAreaSurcharge(Number(e.target.value))}
+                  max={500}
+                  value={standardFare}
+                  onChange={(e) => setStandardFare(Number(e.target.value))}
                   className="w-full min-h-[46px] px-3.5 py-2.5 rounded-xl border border-zinc-300 bg-stone-50 font-mono text-sm text-zinc-950"
                 />
               </div>
             </div>
 
             <div className="p-4 rounded-2xl bg-stone-100 text-xs text-zinc-700 space-y-1">
-              <p className="font-semibold text-zinc-950">Sample Ausa Fare Preview:</p>
+              <p className="font-semibold text-zinc-950">Active AusaRides Fare Preview:</p>
               <p className="font-mono">
-                ST Bus Stand → Bhuikot Killa (~1.1 km): ₹
-                {Math.max(minFare, Math.round(baseFare + 1.1 * perKmRate))}
+                AUSA Bustand ↔ AUSA Mode: ₹{modeBustandPerPerson} × passengers
               </p>
               <p className="font-mono">
-                ST Bus Stand → Latur Road Naka (~2.1 km, Outer Naka): ₹
-                {Math.max(minFare, Math.round(baseFare + 2.1 * perKmRate + outerAreaSurcharge))}
+                Any other location from AUSA Mode / Bustand: ₹{standardFare} fixed
               </p>
             </div>
 
@@ -591,7 +569,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ profile, lang })
         </div>
       )}
 
-      {/* Mobile Bottom Tab Bar */}
       <nav
         aria-label="Admin navigation"
         className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800 grid grid-cols-4 h-16 pb-safe"

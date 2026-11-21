@@ -25,10 +25,12 @@ import {
   Wallet,
   XCircle,
 } from 'lucide-react';
+import { AUSA_CENTER, AusaPoint, LANDMARK_BY_ID } from '../data/ausaLandmarks';
 import { useT } from '../i18n/translations';
 import { db, handleFirestoreError, OperationType, reportFirestoreError } from '../lib/firebase';
 import { Lang, Ride, UserProfile } from '../types';
 import { sanitizeText } from '../utils/sanitize';
+import { AusaMap } from './AusaMap';
 import { UpiQrPanel } from './ReceiptModal';
 
 interface DriverDashboardProps {
@@ -113,6 +115,27 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
     [driverRides]
   );
 
+  const activeTripPoints = useMemo(() => {
+    if (!activeTrip) return null;
+    const pLm = LANDMARK_BY_ID.get(activeTrip.pickupLandmarkId);
+    const dLm = LANDMARK_BY_ID.get(activeTrip.dropoffLandmarkId);
+    const pPt: AusaPoint = {
+      id: activeTrip.pickupLandmarkId,
+      nameEn: activeTrip.pickupLandmarkName,
+      nameMr: pLm ? pLm.nameMr : activeTrip.pickupLandmarkName,
+      lat: pLm ? pLm.lat : AUSA_CENTER.lat - 0.001,
+      lng: pLm ? pLm.lng : AUSA_CENTER.lng - 0.001,
+    };
+    const dPt: AusaPoint = {
+      id: activeTrip.dropoffLandmarkId,
+      nameEn: activeTrip.dropoffLandmarkName,
+      nameMr: dLm ? dLm.nameMr : activeTrip.dropoffLandmarkName,
+      lat: dLm ? dLm.lat : AUSA_CENTER.lat + 0.002,
+      lng: dLm ? dLm.lng : AUSA_CENTER.lng + 0.002,
+    };
+    return { pPt, dPt };
+  }, [activeTrip]);
+
   useEffect(() => {
     if (activeTrip && tab === 'dispatch') {
       setTab('active');
@@ -169,6 +192,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
 
   const handleToggleOnline = async () => {
     if (!isVerifiedDriver) return;
+    setActionError('');
     setBusyAction(true);
     try {
       await updateDoc(doc(db, 'users', profile.uid), {
@@ -176,7 +200,8 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
         updatedAt: serverTimestamp(),
       });
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `users/${profile.uid}`);
+      reportFirestoreError(err, OperationType.UPDATE, `users/${profile.uid}`);
+      setActionError('Could not update online availability. Please try again.');
     } finally {
       setBusyAction(false);
     }
@@ -193,7 +218,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
 
       batch.update(rideRef, {
         driverId: profile.uid,
-        driverName: sanitizeText(profile.fullName, 80),
+        driverName: sanitizeText(profile.fullName, 80) || 'Driver',
         driverVehicleNumber: profile.vehicleNumber || 'MH-24-AU-0001',
         status: 'accepted',
         updatedAt: serverTimestamp(),
@@ -216,6 +241,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
   };
 
   const handleMarkArrived = async (ride: Ride) => {
+    setActionError('');
     setBusyAction(true);
     try {
       await updateDoc(doc(db, 'rides', ride.rideId), {
@@ -223,7 +249,8 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
         updatedAt: serverTimestamp(),
       });
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `rides/${ride.rideId}`);
+      reportFirestoreError(err, OperationType.UPDATE, `rides/${ride.rideId}`);
+      setActionError(t.rideActionError);
     } finally {
       setBusyAction(false);
     }
@@ -256,6 +283,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
   };
 
   const handleCompleteTrip = async (ride: Ride) => {
+    setActionError('');
     setBusyAction(true);
     try {
       await updateDoc(doc(db, 'rides', ride.rideId), {
@@ -266,7 +294,8 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
       setRiderPhone('');
       setTab('earnings');
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `rides/${ride.rideId}`);
+      reportFirestoreError(err, OperationType.UPDATE, `rides/${ride.rideId}`);
+      setActionError(t.rideActionError);
     } finally {
       setBusyAction(false);
     }
@@ -318,19 +347,29 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
           </button>
         </div>
       ) : (
-        <div className="bg-white border border-zinc-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div
+          className={`rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border transition-colors ${
+            profile.isOnline || isAdminPreview
+              ? 'bg-emerald-50 border-emerald-400'
+              : 'bg-white border-zinc-200'
+          }`}
+        >
           <div className="flex items-center gap-3">
             <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+              className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                 profile.isOnline || isAdminPreview
-                  ? 'bg-yellow-400 text-zinc-950'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-stone-200 text-zinc-700'
               }`}
             >
               <Radio className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-zinc-950">
+              <p
+                className={`text-sm font-bold ${
+                  profile.isOnline || isAdminPreview ? 'text-emerald-950' : 'text-zinc-950'
+                }`}
+              >
                 {profile.isOnline || isAdminPreview ? t.onlineStatus : t.offlineStatus}
               </p>
               <p className="text-xs font-mono text-zinc-600 mt-0.5">
@@ -346,8 +385,8 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
               onClick={handleToggleOnline}
               className={`min-h-[46px] px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shrink-0 ${
                 profile.isOnline
-                  ? 'bg-zinc-950 text-yellow-400 hover:bg-zinc-800'
-                  : 'bg-yellow-400 text-zinc-950 hover:bg-yellow-300'
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                  : 'bg-zinc-950 text-yellow-400 hover:bg-zinc-800'
               }`}
             >
               <Power className="w-4 h-4" />
@@ -436,7 +475,11 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
                         {ride.dropoffCustomAddress ? `· Drop: ${ride.dropoffCustomAddress}` : ''}
                       </p>
                     )}
-                    <div className="flex items-center gap-4 pt-1 text-sm">
+                    <div className="flex items-center gap-3 pt-1 text-sm">
+                      <span className="font-mono font-bold text-zinc-950 tabular-nums">
+                        {ride.passengerCount || 1} pax
+                      </span>
+                      <span className="text-zinc-400">·</span>
                       <span className="font-mono font-bold text-zinc-950 tabular-nums">
                         {ride.distanceKm.toFixed(1)} km
                       </span>
@@ -491,7 +534,8 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
                       </p>
                     )}
                     <p className="text-xs text-zinc-400 mt-2">
-                      Rider: {activeTrip.riderName} · {activeTrip.distanceKm.toFixed(1)} km ·{' '}
+                      Rider: {activeTrip.riderName} · {activeTrip.passengerCount || 1} pax ·{' '}
+                      {activeTrip.distanceKm.toFixed(1)} km ·{' '}
                       {activeTrip.paymentMethod.toUpperCase()}
                     </p>
                   </div>
@@ -519,6 +563,12 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
 
               {/* Step Action Card */}
               <div className="bg-white border border-zinc-200 rounded-3xl p-6 space-y-4">
+                {actionError && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800">
+                    {actionError}
+                  </div>
+                )}
+
                 {activeTrip.status === 'accepted' && (
                   <div className="space-y-3">
                     <button
@@ -556,7 +606,10 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
                         inputMode="numeric"
                         maxLength={4}
                         value={pinInput}
-                        onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => {
+                          setPinInput(e.target.value.replace(/\D/g, ''));
+                          if (pinError) setPinError('');
+                        }}
                         placeholder="0000"
                         className="w-full min-h-[54px] px-4 py-3 rounded-xl border-2 border-zinc-950 bg-stone-50 font-mono text-2xl font-bold tracking-[0.4em] text-center text-zinc-950 focus:outline-none focus:bg-white"
                       />
@@ -611,6 +664,17 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Offline Ausa Map & Route Directions for Driver */}
+              {activeTripPoints && (
+                <AusaMap
+                  pickup={activeTripPoints.pPt}
+                  dropoff={activeTripPoints.dPt}
+                  lang={lang}
+                  distanceKm={activeTrip.distanceKm}
+                  defaultShowDirections={false}
+                />
+              )}
             </div>
           )}
         </div>

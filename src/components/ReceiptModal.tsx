@@ -9,21 +9,37 @@ interface ReceiptModalProps {
   onClose: () => void;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function downloadRideReceipt(ride: Ride) {
   const dateStr = ride.updatedAt?.toDate
     ? ride.updatedAt.toDate().toLocaleString('en-IN')
     : new Date().toLocaleString('en-IN');
 
+  const pickupLabel = `${escapeHtml(ride.pickupLandmarkName)}${
+    ride.pickupCustomAddress ? ` (${escapeHtml(ride.pickupCustomAddress)})` : ''
+  }`;
+  const dropoffLabel = `${escapeHtml(ride.dropoffLandmarkName)}${
+    ride.dropoffCustomAddress ? ` (${escapeHtml(ride.dropoffCustomAddress)})` : ''
+  }`;
+
   const receiptHtml = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>AusaRides Receipt - ${ride.rideId}</title>
+<title>AusaRides Receipt - ${escapeHtml(ride.rideId)}</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 480px; margin: 32px auto; padding: 24px; border: 1px solid #e4e4e7; border-radius: 12px; color: #09090b; }
   h1 { font-size: 20px; margin: 0 0 4px; }
   .sub { font-size: 12px; color: #52525b; margin-bottom: 20px; }
-  .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f4f4f5; font-size: 14px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f4f4f5; font-size: 14px; }
   .total { font-weight: 700; font-size: 18px; border-top: 2px solid #09090b; border-bottom: none; padding-top: 12px; margin-top: 8px; }
   .mono { font-family: monospace; }
 </style>
@@ -31,18 +47,16 @@ export function downloadRideReceipt(ride: Ride) {
 <body>
   <h1>AusaRides Trip Receipt</h1>
   <div class="sub">Ausa, Dist. Latur, Maharashtra (18.2500° N, 76.5000° E)</div>
-  <div class="row"><span>Receipt ID</span><span class="mono">${ride.rideId}</span></div>
-  <div class="row"><span>Date & Time</span><span>${dateStr}</span></div>
-  <div class="row"><span>Rider</span><span>${ride.riderName}</span></div>
-  <div class="row"><span>Auto Driver</span><span>${ride.driverName || '—'}</span></div>
-  <div class="row"><span>Vehicle Plate</span><span class="mono">${ride.driverVehicleNumber || '—'}</span></div>
-  <div class="row"><span>Pickup</span><span>${ride.pickupLandmarkName}${ride.pickupCustomAddress ? ' (' + ride.pickupCustomAddress + ')' : ''}</span></div>
-  <div class="row"><span>Drop-off</span><span>${ride.dropoffLandmarkName}${ride.dropoffCustomAddress ? ' (' + ride.dropoffCustomAddress + ')' : ''}</span></div>
+  <div class="row"><span>Receipt ID</span><span class="mono">${escapeHtml(ride.rideId)}</span></div>
+  <div class="row"><span>Date & Time</span><span>${escapeHtml(dateStr)}</span></div>
+  <div class="row"><span>Rider</span><span>${escapeHtml(ride.riderName)}</span></div>
+  <div class="row"><span>Auto Driver</span><span>${escapeHtml(ride.driverName || '—')}</span></div>
+  <div class="row"><span>Vehicle Plate</span><span class="mono">${escapeHtml(ride.driverVehicleNumber || '—')}</span></div>
+  <div class="row"><span>Pickup</span><span>${pickupLabel}</span></div>
+  <div class="row"><span>Drop-off</span><span>${dropoffLabel}</span></div>
+  <div class="row"><span>Passengers</span><span class="mono">${ride.passengerCount || 1}</span></div>
   <div class="row"><span>Distance</span><span class="mono">${ride.distanceKm.toFixed(1)} km</span></div>
-  <div class="row"><span>Base Fare</span><span class="mono">₹${ride.baseFareUsed}</span></div>
-  <div class="row"><span>Distance Charge (${ride.distanceKm.toFixed(1)} × ₹${ride.perKmUsed})</span><span class="mono">₹${Math.round(ride.distanceKm * ride.perKmUsed)}</span></div>
-  <div class="row"><span>Outer Naka Surcharge</span><span class="mono">₹${ride.locationSurchargeUsed}</span></div>
-  <div class="row"><span>Payment Mode</span><span>${ride.paymentMethod.toUpperCase()} (${ride.paymentStatus.toUpperCase()})</span></div>
+  <div class="row"><span>Payment Mode</span><span>${escapeHtml(ride.paymentMethod.toUpperCase())} (${escapeHtml(ride.paymentStatus.toUpperCase())})</span></div>
   <div class="row total"><span>Total Paid</span><span class="mono">₹${ride.fareInr}</span></div>
 </body>
 </html>`;
@@ -91,11 +105,17 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ ride, lang, onClose 
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-zinc-500">Pickup</span>
-            <span className="font-medium text-zinc-950 text-right">{ride.pickupLandmarkName}</span>
+            <span className="font-medium text-zinc-950 text-right">
+              {ride.pickupLandmarkName}
+              {ride.pickupCustomAddress ? ` (${ride.pickupCustomAddress})` : ''}
+            </span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-zinc-500">Drop-off</span>
-            <span className="font-medium text-zinc-950 text-right">{ride.dropoffLandmarkName}</span>
+            <span className="font-medium text-zinc-950 text-right">
+              {ride.dropoffLandmarkName}
+              {ride.dropoffCustomAddress ? ` (${ride.dropoffCustomAddress})` : ''}
+            </span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-zinc-500">Driver & Auto</span>
@@ -104,8 +124,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ ride, lang, onClose 
             </span>
           </div>
           <div className="flex justify-between gap-4">
-            <span className="text-zinc-500">{t.distanceLabel}</span>
-            <span className="font-mono text-zinc-950">{ride.distanceKm.toFixed(1)} km</span>
+            <span className="text-zinc-500">Passengers · {t.distanceLabel}</span>
+            <span className="font-mono text-zinc-950">
+              {ride.passengerCount || 1} · {ride.distanceKm.toFixed(1)} km
+            </span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-zinc-500">{t.paymentMethodLabel}</span>

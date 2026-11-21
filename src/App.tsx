@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Languages, LogOut, Mail, Shield } from 'lucide-react';
+import { BookOpen, Languages, LogOut, Mail, Shield } from 'lucide-react';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AuthScreen } from './components/AuthScreen';
 import { DriverDashboard } from './components/DriverDashboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { InfoModal, InfoSection } from './components/InfoModal';
 import { OnboardingProfile } from './components/OnboardingProfile';
 import { RiderDashboard } from './components/RiderDashboard';
 import { useT } from './i18n/translations';
@@ -21,6 +22,7 @@ function AusaRidesApp() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [devViewMode, setDevViewMode] = useState<ViewMode>('admin');
+  const [infoSection, setInfoSection] = useState<InfoSection | null>(null);
 
   const t = useT(lang);
 
@@ -103,42 +105,46 @@ function AusaRidesApp() {
             )}
           </a>
 
-          {/* Zone 2: Clean website nav links when signed out, user context when signed in */}
-          {!firebaseUser ? (
-            <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-zinc-300">
-              <a
-                href="#landmarks"
-                className="hover:text-yellow-400 transition-colors whitespace-nowrap shrink-0"
-              >
-                {t.navLandmarks}
-              </a>
-              <a
-                href="#features"
-                className="hover:text-yellow-400 transition-colors whitespace-nowrap shrink-0"
-              >
-                {t.navFeatures}
-              </a>
-              <a
-                href="#safety"
-                className="hover:text-yellow-400 transition-colors whitespace-nowrap shrink-0"
-              >
-                {t.navSafety}
-              </a>
-            </nav>
-          ) : (
-            <div className="hidden md:flex items-center gap-4 text-xs text-zinc-400 whitespace-nowrap">
-              <span>{t.cityTag}</span>
-              {profile && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span className="text-zinc-200 font-medium">{profile.fullName}</span>
-                </>
-              )}
-            </div>
-          )}
+          {/* Zone 2: Separate Info / Instructions Buttons */}
+          <nav className="hidden md:flex items-center gap-5 text-xs font-medium text-zinc-300">
+            <button
+              type="button"
+              onClick={() => setInfoSection('guide')}
+              className="hover:text-yellow-400 transition-colors whitespace-nowrap shrink-0"
+            >
+              {t.navGuide}
+            </button>
+            <button
+              type="button"
+              onClick={() => setInfoSection('fares')}
+              className="hover:text-yellow-400 transition-colors whitespace-nowrap shrink-0"
+            >
+              {t.navFares}
+            </button>
+            <button
+              type="button"
+              onClick={() => setInfoSection('safety')}
+              className="hover:text-yellow-400 transition-colors whitespace-nowrap shrink-0"
+            >
+              {t.navSafety}
+            </button>
+            {firebaseUser && profile && (
+              <span className="text-zinc-400 pl-2 border-l border-zinc-800 whitespace-nowrap">
+                {profile.fullName}
+              </span>
+            )}
+          </nav>
 
-          {/* Zone 3: Language Switcher + Primary Account Action */}
+          {/* Zone 3: Mobile Info Button + Language Switcher + Primary Account Action */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setInfoSection('guide')}
+              aria-label={t.navGuide}
+              className="md:hidden min-h-[40px] min-w-[40px] px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 hover:text-yellow-400 flex items-center justify-center transition-colors shrink-0"
+            >
+              <BookOpen className="w-4 h-4" />
+            </button>
             <button
               type="button"
               onClick={() => setLang((prev) => (prev === 'en' ? 'mr' : 'en'))}
@@ -206,12 +212,14 @@ function AusaRidesApp() {
             lang={lang}
             unverifiedUser={null}
             onVerificationRefresh={refreshVerification}
+            onOpenInfo={setInfoSection}
           />
         ) : !firebaseUser.emailVerified ? (
           <AuthScreen
             lang={lang}
             unverifiedUser={firebaseUser}
             onVerificationRefresh={refreshVerification}
+            onOpenInfo={setInfoSection}
           />
         ) : !profile ? (
           <OnboardingProfile firebaseUser={firebaseUser} lang={lang} />
@@ -257,6 +265,13 @@ function AusaRidesApp() {
           </div>
         </div>
       </footer>
+
+      <InfoModal
+        section={infoSection}
+        lang={lang}
+        onSelectSection={setInfoSection}
+        onClose={() => setInfoSection(null)}
+      />
     </div>
   );
 }

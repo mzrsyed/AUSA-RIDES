@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Car, Shield, UserCheck } from 'lucide-react';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, OperationType, reportFirestoreError } from '../lib/firebase';
 import {
   isAdminEmail,
   normalizeIndianPhone,
@@ -92,7 +92,8 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({ firebaseUs
         updatedAt: serverTimestamp(),
       });
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, userPath);
+      reportFirestoreError(err, OperationType.CREATE, userPath);
+      setErrorMsg('Could not save your profile. Please verify your details and try again.');
     } finally {
       setSaving(false);
     }
